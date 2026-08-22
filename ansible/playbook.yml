@@ -1,0 +1,57 @@
+---
+- name: Configure app server and deploy conteiner
+  hosts: app_servers
+  become: true
+  vars:
+    aws_region: "eu-central-1"
+
+  tasks:
+    - name: Install Docker
+      dnf:
+        name: docker
+        state: present
+    - name: Start docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+    
+    - name: Add ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+    
+    - name: Install AWS CLI
+      dnf:
+        name: awscli
+        state: present
+    
+    - name: Login to AWS ECR
+      shell: >
+        aws ecr get-login-password --region {{ aws_region }} |
+        docker login --username AWS --password-stdin {{ ecr_image.split('/')[0] }}
+      changed_when: false
+
+    - name: Show resolved ecr_image variable
+      debug:
+        msg: "ecr_image = {{ ecr_image }}"
+    
+    - name: Pull latest app image
+      command: docker pull {{ ecr_image }}
+      register: pull_result
+      changed_when: "'Downloaded newer image' in pull_result.stdout or 'Status: Downloaded' in pull_result.stdout"
+    
+    - name: Stop and remove existing container
+      community.docker.docker_container:
+        name: pomidor-app
+        state: absent
+
+    - name: run the app container
+      community.docker.docker_container:
+        name: pomidor-app
+        image: "{{ ecr_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"

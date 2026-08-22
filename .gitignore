@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+app/venv/
+.pytest_cache/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+crash.log
+
+# Ansible
+ansible/inventory.ini
+*.retry
+
+# Misc
+.env
+.DS_Store

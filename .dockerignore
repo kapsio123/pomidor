@@ -1,0 +1,9 @@
+__pycache__
+*.pyc
+.git
+.github
+terraform
+ansible
+k8s
+*.md
+app/venv
