@@ -18,7 +18,7 @@ COPY app/ .
 USER appuser
 EXPOSE 5000
 
-ENV APP_VERSION=dev
+ENV APP_VERSION=dev0
 
 HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')" || exit 1
 
