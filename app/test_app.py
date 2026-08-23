@@ -1,14 +1,17 @@
 from app import app
 
+
 def client():
     app.testing = True
     return app.test_client()
+
 
 def test_health():
     c = client()
     response = c.get("/health")
     assert response.status_code == 200
     assert response.json["status"] == "ok"
+
 
 def test_add_task_and_list():
     c = client()
@@ -17,6 +20,7 @@ def test_add_task_and_list():
     response = c.get("/tasks")
     titles = [t["title"] for t in response.json["tasks"]]
     assert "Test Task" in titles
+
 
 def test_add_task_without_title():
     c = client()
@@ -40,6 +44,7 @@ def test_start_pomodoro_focus_session():
     data = resp.get_json()["session"]
     assert data["duration_seconds"] == 25 * 60
 
+
 def test_start_pomodoro_invalid_type():
     c = client()
     resp = c.post("/pomodoro/start", json={"type": "nap"})
@@ -51,7 +56,11 @@ def test_complete_pomodoro_increments_task_count():
     task_resp = c.post("/tasks", json={"title": "study terraform"})
     task_id = task_resp.get_json()["task"]["id"]
 
-    session_resp = c.post("/pomodoro/start", json={"type": "focus", "task_id": task_id})
+    session_resp = c.post(
+        "/pomodoro/start",
+        json={
+            "type": "focus",
+            "task_id": task_id})
     session_id = session_resp.get_json()["session"]["id"]
 
     c.post(f"/pomodoro/{session_id}/complete")

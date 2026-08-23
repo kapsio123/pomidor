@@ -9,20 +9,23 @@ app = Flask(__name__)
 tasks = []
 sessions = []
 
-POMODORO_DURATION = 25 * 60 # 25 minutes
-SHORT_BREAK_DURATION = 5 * 60 # 5 minutes
-LONG_BREAK_DURATION = 15 * 60 # 15 minutes
+POMODORO_DURATION = 25 * 60  # 25 minutes
+SHORT_BREAK_DURATION = 5 * 60  # 5 minutes
+LONG_BREAK_DURATION = 15 * 60  # 15 minutes
+
 
 @app.route("/health")
 def health():
-    return jsonify(status = "ok", hostname = socket.gethostname())
+    return jsonify(status="ok", hostname=socket.gethostname())
+
 
 @app.route("/")
 def index():
     return jsonify(
-        message = "pomidor - pomodoro timer",
-        version = os.environ.get("APP_VERSION", "dev"),
+        message="pomidor - pomodoro timer",
+        version=os.environ.get("APP_VERSION", "dev"),
     )
+
 
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
@@ -35,7 +38,12 @@ def add_task():
     title = data.get("title")
     if not title:
         return jsonify(error="title is required"), 400
-    task = {"id": str(uuid.uuid4()), "title": title, "done": False, "pomodoros": 0}
+    task = {
+        "id": str(
+            uuid.uuid4()),
+        "title": title,
+        "done": False,
+        "pomodoros": 0}
     tasks.append(task)
     return jsonify(task=task), 201
 
@@ -55,7 +63,8 @@ def complete_task(task_id):
 def start_pomodoro():
     data = request.get_json(force=True)
     task_id = data.get("task_id")
-    session_type = data.get("type", "focus")  # focus | short_break | long_break
+    # focus | short_break | long_break
+    session_type = data.get("type", "focus")
 
     duration_map = {
         "focus": POMODORO_DURATION,
