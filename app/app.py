@@ -23,7 +23,7 @@ def health():
 def index():
     return jsonify(
         message="pomidor - pomodoro timer",
-        version=os.environ.get("APP_VERSION", "dev"),
+        version=os.environ.get("APP_VERSION", "dev0"),
     )
 
 
