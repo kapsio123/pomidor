@@ -1,0 +1,93 @@
+name: CI/CD
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+env: 
+    AWS_REGION: eu-central-1
+    ECR_REPOSITORY: pomidor-app
+
+jobs:
+    lint-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install dependencies
+              working-directory: app
+              run: |
+                pip install -r requirements.txt
+                pip install flake8 pytest
+
+            - name: Lint
+              working-directory: app
+              run: flake8 --max-line-length=100 .
+
+            - name: Test
+              working-directory: app
+              run: pytest -v
+
+    build-and-push:
+        needs: lint-and-test
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+        outputs:
+            image: ${{ steps.image.outputs.image }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                aws-region: ${{ env.AWS_REGION }}
+            - name: Log in to ECR
+              id: ecr-login
+              uses: aws-actions/amazon-ecr-login@v2
+
+            - name: Build, tag and push image
+              id: image
+              env:
+                REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+                IMAGE_TAG: ${{ github.sha }}
+              run: |
+                docker build -f docker/Dockerfile -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+                docker tag $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $REGISTRY/$ECR_REPOSITORY:latest
+                docker push $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+                docker push $REGISTRY/$ECR_REPOSITORY:latest
+                echo "image=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+    deploy:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4
+
+        - name: Set up Ansible
+          run: pip install ansible
+
+        - name: Install Ansible collections
+          run: ansible-galaxy collection install -r ansible/requirements.yml
+
+        - name: Set up SSH key
+          run: |
+            mkdir -p ~/.ssh
+            echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key.pem
+            chmod 600 ~/.ssh/deploy_key.pem
+
+        - name: Run Ansible playbook
+          run: |
+            ansible-playbook -i "${{ secrets.APP_SERVER_IP }}," \
+                --user ec2-user \
+                --private-key ~/.ssh/deploy_key.pem \
+                -e "ecr_image=${{ needs.build-and-push.outputs.image }}" \
+                --ssh-common-args='-o StrictHostKeyChecking=no' \
+                ansible/playbook.yml
