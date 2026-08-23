@@ -1,6 +1,6 @@
 ---
 - name: Configure app server and deploy conteiner
-  hosts: app_servers
+  hosts: all
   become: true
   vars:
     aws_region: "eu-central-1"
