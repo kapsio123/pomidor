@@ -1,6 +1,6 @@
 ---
 - name: Configure app server and deploy conteiner
-  hosts: all
+  hosts: pomidor_app_servers
   become: true
   vars:
     aws_region: "eu-central-1"

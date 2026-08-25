@@ -83,11 +83,16 @@ jobs:
             echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key.pem
             chmod 600 ~/.ssh/deploy_key.pem
 
+        - name: Create Ansible inventory file
+          run: |
+            mkdir -p ansible
+            cat > ansible/inventory.ini <<EOF
+            [pomidor_app_servers]
+            app-1 ansible_host=${{ secrets.APP_SERVER_IP }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/deploy_key.pem
+            EOF
         - name: Run Ansible playbook
           run: |
-            ansible-playbook -i "${{ secrets.APP_SERVER_IP }}," \
-                --user ec2-user \
-                --private-key ~/.ssh/deploy_key.pem \
+            ansible-playbook -i ansible/inventory.ini \
                 -e "ecr_image=${{ needs.build-and-push.outputs.image }}" \
                 --ssh-common-args='-o StrictHostKeyChecking=no' \
                 ansible/playbook.yml
